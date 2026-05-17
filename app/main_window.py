@@ -254,6 +254,31 @@ class MainWindow(QMainWindow):
         if key in self.mode_panels:
             self.mode_panel_stack.setCurrentWidget(self.mode_panels[key])
         self.mode_panel_wrap.setVisible(True)
+        # pick a sensible default tool for the mode if a doc is open
+        if not self._current_tab(): return
+        mode_default = {
+            "edit":    Tool.EDIT_TEXT,
+            "convert": Tool.SELECT,   # Convert mode is about output, not annotation
+            "esign":   Tool.SIGNATURE,
+            "all":     Tool.SELECT,
+        }
+        tool = mode_default.get(key)
+        if tool is not None:
+            # for signature, trigger the picker (which shows the signature dialog if not set)
+            if tool == Tool.SIGNATURE:
+                # do not auto-prompt; let user click Sign tool themselves
+                self._set_tool(Tool.SELECT)
+            else:
+                self._set_tool(tool)
+        # status hint per mode
+        hints = {
+            "edit": "Edit mode — hover over text to outline it, double-click to edit, or click 'Text' to add new text.",
+            "convert": "Convert mode — pick an output format and click Convert.",
+            "esign": "E-Sign mode — pick 'Add your signature' or use the fill tools.",
+            "all": "All tools — pick an action from the left panel.",
+        }
+        if key in hints:
+            self.statusBar().showMessage(hints[key], 5000)
 
     def _hide_mode_panel(self):
         self.mode_panel_wrap.setVisible(False)
@@ -775,8 +800,11 @@ class MainWindow(QMainWindow):
             "add_field":       self._add_text_field,
             "add_checkbox":    self._add_checkbox,
             "save_certified":  self.save_as,
-            "esign":           self._do_share_for_signing,
-            "comments":        self._do_share_for_signing,
+
+            # Mode tab shortcuts (clicked from All-tools panel)
+            "edit":            lambda: self._switch_mode_and_focus("edit"),
+            "esign":           lambda: self._switch_mode_and_focus("esign"),
+            "comments":        lambda: self._on_rail_panel("comments"),
 
             # Measure / advanced
             "measure":         lambda: self._set_tool(Tool.MEASURE_DIST),
@@ -797,6 +825,10 @@ class MainWindow(QMainWindow):
     def _show_pages_flyout(self):
         self.rail.select("pages")
         self._on_rail_panel("pages")
+
+    def _switch_mode_and_focus(self, key: str):
+        """Activate a mode tab (also picks the matching default tool)."""
+        self.mode_bar.set_mode(key)
 
     # ============== signatures / images / stamps / links ==============
     def _maybe_pick_signature(self):

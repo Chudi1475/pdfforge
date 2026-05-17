@@ -95,6 +95,7 @@ class PdfGraphicsView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.setDragMode(QGraphicsView.NoDrag)
         self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)  # required for hover-without-press
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -128,6 +129,7 @@ class PdfGraphicsView(QGraphicsView):
         self._link_target: Optional[dict] = None  # {"kind":"uri","value":...}
         self._edit_proxy = None  # inline editor proxy widget
         self._redact_marks: list[QGraphicsRectItem] = []  # visual marks for queued redactions
+        self._hover_outline: Optional[QGraphicsRectItem] = None  # text span hover indicator
 
     # ---------------- document ----------------
     def set_document(self, doc: Optional[PdfDocument]):
@@ -333,6 +335,7 @@ class PdfGraphicsView(QGraphicsView):
     def set_tool(self, tool: Tool):
         self._cancel_edit()
         self._cancel_polygon()
+        self._clear_hover_outline()
         self.tool = tool
         cursors = {
             Tool.SELECT: Qt.ArrowCursor,
@@ -525,6 +528,11 @@ class PdfGraphicsView(QGraphicsView):
             self._preview.setPath(self._draw_path)
             self._draw_points.append(sp)
         else:
+            # hover outline when EDIT_TEXT or SELECT (no drag in progress)
+            if self.tool in (Tool.EDIT_TEXT, Tool.SELECT) and self._press_page is None:
+                self._update_hover_outline(sp)
+            else:
+                self._clear_hover_outline()
             super().mouseMoveEvent(e)
 
     def mouseReleaseEvent(self, e: QMouseEvent):
@@ -756,14 +764,33 @@ class PdfGraphicsView(QGraphicsView):
 
     # ---------------- text editing ----------------
     def _begin_insert_text(self, pv: PageView, sp: QPointF):
-        text, ok = QInputDialog.getMultiLineText(self, "Insert Text", "Text:")
-        if not ok or not text: return
-        x, y = self._scene_to_pdf(pv, sp)
+        """Open an inline editor at the click point. No dialog."""
+        self._cancel_edit()
+        from .text_editor import InlineTextCreator
+        creator = InlineTextCreator(sp, fontsize=self.text_size,
+                                    color=self.draw_color, zoom=self.zoom)
+        proxy = self.scene().addWidget(creator)
+        proxy.setPos(sp.x(), sp.y() - creator.height() / 4)
+        proxy.setZValue(100)
+        creator.setFocus(Qt.OtherFocusReason)
+        creator.commit_text.connect(
+            lambda pos, text, fs, p=pv: self._commit_inline_text(p, pos, text, fs))
+        creator.cancelled.connect(self._cancel_edit)
+        self._edit_proxy = proxy
+
+    def _commit_inline_text(self, pv: PageView, scene_pos: QPointF,
+                            text: str, fontsize: float):
+        x, y = self._scene_to_pdf(pv, scene_pos)
         c = self.draw_color
-        self.doc.add_text(pv.index, x, y + self.text_size, text,
-                          fontsize=self.text_size,
-                          color=(c.redF(), c.greenF(), c.blueF()))
-        self.refresh_page(pv.index); self.document_modified.emit()
+        try:
+            # offset so the click point is the top of the text, not the baseline
+            self.doc.add_text(pv.index, x, y + fontsize, text,
+                              fontsize=int(fontsize),
+                              color=(c.redF(), c.greenF(), c.blueF()))
+            self.refresh_page(pv.index)
+            self.document_modified.emit()
+        finally:
+            self._cancel_edit()
 
     def _begin_edit_text(self, pv: PageView, sp: QPointF):
         x, y = self._scene_to_pdf(pv, sp)
@@ -803,6 +830,40 @@ class PdfGraphicsView(QGraphicsView):
             except Exception:
                 pass
             self._edit_proxy = None
+
+    def _update_hover_outline(self, sp: QPointF):
+        """When hovering with EDIT_TEXT/SELECT, draw a soft outline over text under cursor."""
+        pv = self._page_at_scene(sp)
+        if not pv or not self.doc:
+            self._clear_hover_outline(); return
+        x, y = self._scene_to_pdf(pv, sp)
+        span = self.doc.hit_test_text(pv.index, x, y)
+        if not span:
+            self._clear_hover_outline(); return
+        # convert span bbox back to scene rect
+        tl = self._pdf_to_scene(pv, span.bbox[0], span.bbox[1])
+        br = self._pdf_to_scene(pv, span.bbox[2], span.bbox[3])
+        rect = QRectF(tl, br).normalized()
+        if self._hover_outline is None:
+            self._hover_outline = QGraphicsRectItem(rect)
+            pen = QPen(QColor("#e63946"), 1.5, Qt.DashLine)
+            self._hover_outline.setPen(pen)
+            fill = QColor(230, 57, 70); fill.setAlpha(28)
+            self._hover_outline.setBrush(QBrush(fill))
+            self._hover_outline.setZValue(50)
+            self.scene().addItem(self._hover_outline)
+        else:
+            self._hover_outline.setRect(rect)
+            if not self._hover_outline.scene():
+                self.scene().addItem(self._hover_outline)
+
+    def _clear_hover_outline(self):
+        if self._hover_outline is not None and self._hover_outline.scene():
+            try:
+                self.scene().removeItem(self._hover_outline)
+            except Exception:
+                pass
+        self._hover_outline = None
 
     def _add_note(self, pv: PageView, sp: QPointF):
         text, ok = QInputDialog.getMultiLineText(self, "Sticky Note", "Note:")
