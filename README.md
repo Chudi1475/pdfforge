@@ -1,123 +1,146 @@
 # Chudi PDF Pro
 
-a free, full-featured pdf editor for windows, mac, and linux. professional editing without a subscription.
+a complete, free pdf editor for windows / mac / linux. everything you'd actually use a paid pdf suite for - view, edit text, annotate, sign, redact, merge, split, compress, ocr, watermark, fill forms, convert to word / excel / html, compare, and a lot more. runs entirely on your own machine, no subscription, no cloud upload.
 
-view, edit, annotate, sign, merge, split, compress, password protect, ocr, watermark, redact, and convert pdf files. everything runs locally - your documents never leave your machine.
+## what it can do
 
-## what it looks like
+### view & navigate
+- multi-document tabs - open many pdfs at once, drag tabs to reorder
+- three viewing modes: continuous scroll, single page, two-page spread
+- reading mode (full screen, no chrome) - F11 to toggle
+- left icon rail switches the side panel between **Pages / Bookmarks / Comments / Attachments**
+- page thumbnails with drag-to-reorder and right-click menu
+- bookmarks tree, comments list, attachment list, all wired to jump-on-click
+- continuous text search + Ctrl+F panel with prev/next, match-case, whole-words
+- fit width / fit page / actual size / custom zoom / page indicator with jump
+- right-click any page for copy text, export as image, rotate, duplicate, delete
 
-- top brand bar with built-in document search
-- multi-document tabs so you can have several pdfs open at once
-- left icon rail for switching between pages / bookmarks / comments / attachments
-- center canvas with smooth zoom and pan
-- right-side tools panel with grouped tool cards
-- contextual property strip with color, text size, and stroke controls
-- home screen with quick actions and recent files
+### edit
+- **edit existing text inline** - click on a word with Edit-text tool to retype it
+- add new text anywhere in any color / size / font
+- crop pages visually (drag a rectangle) or by margins for the whole doc
+- headers & footers with left / center / right slots on top and bottom, `{n}` / `{N}` placeholders
+- text watermarks with custom color, opacity, rotation
+- image watermarks with scale, opacity, rotation
+- automatic page numbers in any corner with custom formats
+- create hyperlinks to URLs or other pages (drag a rectangle)
+- add bookmarks to build a TOC outline
+- find & replace text across the whole document
+- edit document properties (title, author, subject, keywords)
 
-## features
-
-**view + navigate**
-- multi-document tabs with drag-to-reorder, close, and unsaved-change prompts
-- multi-page continuous viewer with smooth zoom + pan
-- page thumbnails with drag-to-reorder
-- bookmarks tree (jumps to outline destinations)
-- comments panel (lists every annotation in the doc)
-- attachments panel (embedded files)
-- full text search with prev/next jumps + status counter
-- fit width / fit page / actual / custom zoom / page indicator with jump
-
-**edit + annotate**
-- add text anywhere with font size + color
-- highlight, underline, strikeout
-- freehand drawing (digital ink)
-- rectangles + shapes
+### comment & markup
+- highlight, underline, strikeout, squiggly
 - sticky notes (popup annotations)
-- insert images (drag a rectangle to place)
-- digital signatures: draw with mouse, type in cursive, or upload a png
-- redaction: drag-to-redact, or bulk-redact every instance of given terms
-- undo / redo (50 step history per document)
+- text callouts with leader line
+- free-hand drawing, rectangles, ovals, lines, **arrows**, polygons, polylines
+- stamps gallery: Approved, Confidential, Draft, Final, Reviewed, Rejected, Void, Paid, Received, For Comment, Top Secret, Sample, Original, Copy, Urgent, Not Approved — plus round versions, custom text stamps, and stamps from your own images
+- eraser tool removes any annotation under your cursor
 
-**pages**
-- rotate (90 left/right/180)
-- delete, duplicate, insert blank
-- drag-reorder via thumbnails (then "apply order")
-- extract a range to a new pdf
+### fill & sign
+- digital signature: draw with mouse, type with cursive fonts, or upload an image
+- form field detection — opens all form fields in one dialog to fill
+- create form fields (text inputs, checkboxes)
+- flatten forms to burn values into the document permanently
 
-**document tools**
-- merge multiple pdfs into one (drag list to reorder)
-- split (one-per-page or custom ranges)
-- compress (downsamples large images, deflate everything)
-- password protect with print/copy/modify permission flags
+### organize pages
+- rotate (90 left / right / 180), rotate all / odd / even only
+- delete, duplicate, insert blank, extract page range to new pdf
+- **insert pages from another pdf** at any position
+- **replace a page** with one from another pdf
+- drag-to-reorder via thumbnails, then "apply order"
+- combine multiple pdfs into one (drag list to reorder)
+- split: one-per-page, custom ranges, every N pages, or by file size
+
+### protect
+- password protect with permission flags (print / copy / modify / annotate)
 - remove passwords
-- ocr scanned pdfs to make them searchable (uses tesseract)
-- diagonal watermarks: custom text, color, opacity, rotation
-- automatic page numbers in any corner
-- edit document metadata (title, author, subject, keywords)
+- redact by dragging a black bar
+- **mark for redaction** — preview many redactions before applying
+- redact every occurrence of given terms in bulk
+- sanitize: strip metadata and JavaScript annotations
+- compress: presets from "high quality" to "smallest", custom JPEG quality + max dimension
 
-**convert**
-- pdf -> png/jpeg at any dpi
-- images -> pdf
-- pdf -> plain text
-- extract embedded images
+### convert
+- pdf → word (.docx) preserving paragraphs + inline images
+- pdf → excel (.xlsx) with table detection per page
+- pdf → html with embedded images and inline styles
+- pdf → rich text (.rtf)
+- pdf → plain text (.txt)
+- pdf → images (png/jpeg) at any dpi
+- images → pdf
+- extract all embedded images
+- ocr scanned pdfs (needs tesseract installed)
 - print to any printer
+
+### advanced
+- **compare two pdfs** — text diff per page, color-coded HTML report you can save
+- **batch processor** — apply compress / page-numbers / watermark / convert / sanitize to many files at once with a progress log
+- **read aloud** — text-to-speech with voice + speed controls (uses your OS voices)
+- **measure tools** — distance and area in points/inches/cm
+- **text select** — drag to copy text content from any region
 
 ## install (windows)
 
-1. install python 3.10+ from https://python.org (tick "add python to path" during setup)
-2. double-click `install.bat` - installs deps once
+1. install python 3.10+ from https://python.org (tick "add to path")
+2. double-click `install.bat` — installs deps once
 3. double-click `run.bat` to launch
 
-drag a pdf onto `run.bat` to open it directly, or drag any pdf onto the running app window.
+drag a pdf onto the running window to open it.
 
 ## install (mac / linux)
 
-```bash
+```
 python3 -m pip install -r requirements.txt
 python3 main.py
 ```
 
 ## build a standalone .exe
 
-want to give it to a friend without making them install python? run `build_exe.bat`. output lands in `dist/ChudiPdfPro/`.
+run `build_exe.bat`. output lands in `dist/ChudiPdfPro/`.
 
-## ocr setup (optional)
+## ocr (optional)
 
-ocr requires tesseract:
+tesseract handles ocr.
 - windows: https://github.com/UB-Mannheim/tesseract/wiki
 - mac: `brew install tesseract`
 - linux: `sudo apt install tesseract-ocr`
 
-the app auto-detects tesseract in standard locations.
+the app auto-detects standard install locations.
 
 ## keyboard shortcuts
 
 | action | shortcut |
 | --- | --- |
-| open | ctrl+o |
-| save / save as | ctrl+s / ctrl+shift+s |
-| close tab | ctrl+w |
-| print | ctrl+p |
-| undo / redo | ctrl+z / ctrl+y |
-| find | ctrl+f |
-| zoom in / out | ctrl+= / ctrl+- |
-| fit page / fit width | ctrl+0 / ctrl+1 |
-| previous / next page | pgup / pgdn |
-| select tool | v |
-| hand (pan) | h |
-| add text | shift+t |
-| highlight | shift+h |
-| draw | shift+d |
+| open | Ctrl+O |
+| save / save as | Ctrl+S / Ctrl+Shift+S |
+| close tab | Ctrl+W |
+| print | Ctrl+P |
+| undo / redo | Ctrl+Z / Ctrl+Y |
+| find | Ctrl+F |
+| find & replace | Ctrl+H |
+| add bookmark | Ctrl+B |
+| add hyperlink | Ctrl+K |
+| read aloud | Ctrl+Shift+R |
+| reading mode | F11 |
+| delete current page | Ctrl+Shift+D |
+| zoom in / out | Ctrl+= / Ctrl+- |
+| fit page / fit width | Ctrl+0 / Ctrl+1 |
+| previous / next page | PgUp / PgDn |
+| select / hand / text / edit text | V / H / Shift+T / Shift+E |
+| highlight / draw | Shift+H / Shift+D |
 
 ## tech
 
 - python 3.10+
-- pyside6 (qt) for the gui
-- pymupdf (fitz) for rendering and most pdf ops
-- pikepdf for encryption and low-level pdf fixes
-- pillow + reportlab for image work
-- pytesseract for ocr
+- pyside6 (qt) — gui
+- pymupdf — rendering, annotations, redaction, ocr glue, forms, links, bookmarks
+- pikepdf — encryption + low-level pdf fixes
+- python-docx + openpyxl — word/excel export
+- pillow + reportlab — image work
+- pyttsx3 — offline text-to-speech
+- pytesseract — ocr
 
-all icons are rendered at runtime with qpainter - no external image assets needed.
+all icons are rendered at runtime with qpainter — no asset files needed.
 
 ## license
 

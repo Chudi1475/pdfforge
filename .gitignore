@@ -9,6 +9,9 @@ build/
 dist/
 *.spec
 test.pdf
+test_all.pdf
+other.pdf
+_wm.png
 *.tmp
 .idea/
 .vscode/
