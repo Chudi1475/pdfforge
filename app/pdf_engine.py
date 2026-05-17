@@ -252,19 +252,27 @@ class PdfDocument:
 
     def add_highlight(self, index: int, quads):
         self.snapshot()
-        a = self.doc[index].add_highlight_annot(quads); a.update()
+        page = self.doc[index]
+        a = page.add_highlight_annot(quads)
+        a.update()
 
     def add_underline(self, index: int, quads):
         self.snapshot()
-        a = self.doc[index].add_underline_annot(quads); a.update()
+        page = self.doc[index]
+        a = page.add_underline_annot(quads)
+        a.update()
 
     def add_strikeout(self, index: int, quads):
         self.snapshot()
-        a = self.doc[index].add_strikeout_annot(quads); a.update()
+        page = self.doc[index]
+        a = page.add_strikeout_annot(quads)
+        a.update()
 
     def add_squiggly(self, index: int, quads):
         self.snapshot()
-        a = self.doc[index].add_squiggly_annot(quads); a.update()
+        page = self.doc[index]
+        a = page.add_squiggly_annot(quads)
+        a.update()
 
     def add_rect(self, index: int, rect, color=(1, 0, 0), width: float = 1.5,
                  fill=None, opacity: float = 1.0):
@@ -723,28 +731,132 @@ class PdfDocument:
         p.add_widget(w)
 
     # ----- save -----
-    def save(self, path: Optional[str] = None, compress: bool = True):
+    def save(self, path: Optional[str] = None, compress: bool = True,
+             apply_pending: bool = True, verify: bool = True) -> str:
+        """Atomic, lock-safe save. Applies queued redactions automatically.
+        Returns the path written. Raises on failure with a useful message."""
         out = path or self.path
         if not out:
-            raise ValueError("No path")
-        kwargs = dict(garbage=4, clean=True)
-        if compress:
-            kwargs.update(deflate=True, deflate_images=True, deflate_fonts=True)
-        if out == self.path:
-            tmp = out + ".tmp"
-            self.doc.save(tmp, **kwargs)
-            self.doc.close()
-            os.replace(tmp, out)
+            raise ValueError("No save path specified")
+
+        if apply_pending and self.pending_redactions:
+            self.apply_pending_redactions()
+
+        kwargs = dict(garbage=3, deflate=True, deflate_images=True,
+                      deflate_fonts=True, clean=False)
+        # cannot clean and use incremental together; we never use incremental here
+
+        is_in_place = (self.path is not None
+                       and os.path.abspath(out) == os.path.abspath(self.path))
+
+        if is_in_place:
+            # write to temp, then atomically rename
+            tmp = out + ".saving"
+            try:
+                self.doc.save(tmp, **kwargs)
+            except Exception as e:
+                try:
+                    if os.path.exists(tmp): os.remove(tmp)
+                except Exception:
+                    pass
+                raise IOError(f"Could not write to '{tmp}': {e}") from e
+            try:
+                self.doc.close()
+            except Exception:
+                pass
+            # On Windows os.replace is atomic — handles the case where 'out' exists
+            for attempt in range(5):
+                try:
+                    os.replace(tmp, out)
+                    break
+                except PermissionError:
+                    import time
+                    time.sleep(0.15 * (attempt + 1))
+            else:
+                # last resort: try delete+rename
+                try:
+                    if os.path.exists(out): os.remove(out)
+                    os.rename(tmp, out)
+                except Exception as e:
+                    raise IOError(
+                        f"Could not replace '{out}'. Is it open in another "
+                        f"application?\n\nA backup is at '{tmp}'."
+                    ) from e
             self.doc = fitz.open(out)
         else:
-            self.doc.save(out, **kwargs)
-        self.path = out
+            # different path - direct save
+            try:
+                self.doc.save(out, **kwargs)
+            except Exception as e:
+                raise IOError(f"Could not save to '{out}': {e}") from e
 
-    def save_copy(self, path: str, compress: bool = True):
-        kwargs = dict(garbage=4, clean=True)
-        if compress:
-            kwargs.update(deflate=True, deflate_images=True, deflate_fonts=True)
+        if verify and not self._verify_saved(out):
+            raise IOError(f"Saved file at '{out}' failed integrity check.")
+
+        self.path = out
+        self._history.clear()
+        self._future.clear()
+        return out
+
+    def save_copy(self, path: str, compress: bool = True,
+                  apply_pending: bool = False) -> str:
+        """Save without changing the open document's path. Used for export-like flows."""
+        if apply_pending and self.pending_redactions:
+            self.apply_pending_redactions()
+        kwargs = dict(garbage=3, deflate=True, deflate_images=True,
+                      deflate_fonts=True, clean=False)
         self.doc.save(path, **kwargs)
+        return path
+
+    def save_with_password(self, path: str, user_pw: str, owner_pw: Optional[str] = None,
+                           permissions: Optional[dict] = None) -> str:
+        """Save with strong (AES-256) encryption."""
+        if self.pending_redactions:
+            self.apply_pending_redactions()
+        perms = -1  # all permissions by default
+        if permissions:
+            perms = 0
+            mapping = {
+                "print":     fitz.PDF_PERM_PRINT,
+                "modify":    fitz.PDF_PERM_MODIFY,
+                "copy":      fitz.PDF_PERM_COPY,
+                "annotate":  fitz.PDF_PERM_ANNOTATE,
+                "form":      fitz.PDF_PERM_FORM,
+                "accessibility": fitz.PDF_PERM_ACCESSIBILITY,
+                "assemble":  fitz.PDF_PERM_ASSEMBLE,
+                "print_hq":  fitz.PDF_PERM_PRINT_HQ,
+            }
+            for k, allowed in permissions.items():
+                if allowed and k in mapping:
+                    perms |= mapping[k]
+        self.doc.save(path,
+                      encryption=fitz.PDF_ENCRYPT_AES_256,
+                      user_pw=user_pw,
+                      owner_pw=owner_pw or user_pw,
+                      permissions=perms,
+                      garbage=3, deflate=True)
+        return path
+
+    def _verify_saved(self, path: str) -> bool:
+        """Sanity-check that the saved file is readable and has the expected page count."""
+        try:
+            with fitz.open(path) as d:
+                return d.page_count >= 1 and not d.needs_pass
+        except Exception:
+            return False
+
+    def revert(self):
+        """Reload from disk, discarding all in-memory changes."""
+        if not self.path:
+            raise ValueError("Cannot revert an unsaved document")
+        try:
+            self.doc.close()
+        except Exception:
+            pass
+        self.doc = fitz.open(self.path)
+        self._history.clear()
+        self._future.clear()
+        self.pending_redactions.clear()
 
     def close(self):
         try:
