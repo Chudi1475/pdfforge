@@ -304,6 +304,11 @@ class MainWindow(QMainWindow):
         for i, t in enumerate(self._tabs):
             if t.path and os.path.abspath(t.path) == os.path.abspath(path):
                 self._switch_to_tab(i); return
+        # show edit hint once per session
+        if not getattr(self, "_edit_hint_shown", False):
+            self._edit_hint_shown = True
+            QTimer.singleShot(1200, lambda: self.statusBar().showMessage(
+                "Tip: double-click any text in the page to edit it inline.", 7000))
         try:
             doc = PdfDocument(path)
         except PermissionError:

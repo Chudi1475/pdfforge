@@ -391,6 +391,36 @@ class PdfGraphicsView(QGraphicsView):
             super().wheelEvent(e)
             self._render_visible()
 
+    def mouseDoubleClickEvent(self, e: QMouseEvent):
+        """Double-click anywhere on a text span jumps straight into inline edit."""
+        if e.button() != Qt.LeftButton:
+            return super().mouseDoubleClickEvent(e)
+        sp = self.mapToScene(e.position().toPoint())
+        pv = self._page_at_scene(sp)
+        if not pv:
+            return super().mouseDoubleClickEvent(e)
+        # if we're in a drawing/markup tool that already uses double-click (polygon),
+        # let it handle the event
+        if self.tool == Tool.POLYGON:
+            return super().mouseDoubleClickEvent(e)
+        # if the current tool is one that explicitly uses single-click for its action,
+        # honor the tool. Otherwise, treat double-click as edit-text.
+        if self.tool in (Tool.TEXT, Tool.NOTE, Tool.CALLOUT, Tool.HAND):
+            return super().mouseDoubleClickEvent(e)
+        # try to edit text under the cursor
+        x, y = self._scene_to_pdf(pv, sp)
+        span = self.doc.hit_test_text(pv.index, x, y)
+        if span:
+            # cancel any pending preview so the editor takes over cleanly
+            self._end_preview()
+            self._press_pos = None
+            self._press_page = None
+            self._show_inline_editor(pv, span)
+            e.accept()
+            return
+        # No text under cursor - tell the user what to do
+        self.status.emit("Double-click on a word to edit it, or pick a tool from the palette.")
+
     def mousePressEvent(self, e: QMouseEvent):
         # middle-button pan
         if e.button() == Qt.MiddleButton or (self.tool == Tool.HAND and e.button() == Qt.LeftButton):
