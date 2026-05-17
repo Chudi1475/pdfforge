@@ -1,10 +1,10 @@
 @echo off
 setlocal
-title PDFForge - First-Time Setup
+title Chudi PDF Pro - First-Time Setup
 
 echo.
 echo  ============================================
-echo   PDFForge installer
+echo   Chudi PDF Pro installer
 echo  ============================================
 echo.
 
@@ -31,7 +31,7 @@ if errorlevel 1 (
 
 echo.
 echo  ============================================
-echo   Done! Double-click run.bat to start PDFForge.
+echo   Done! Double-click run.bat to start.
 echo  ============================================
 echo.
 pause

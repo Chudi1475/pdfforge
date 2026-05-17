@@ -1,13 +1,13 @@
 @echo off
 setlocal
-title PDFForge - Build Standalone EXE
+title Chudi PDF Pro - Build Standalone EXE
 cd /d "%~dp0"
 
 echo  Installing PyInstaller if needed...
 python -m pip install --upgrade pyinstaller
 
 echo  Building standalone exe (this can take a few minutes)...
-pyinstaller --noconfirm --windowed --name PDFForge ^
+pyinstaller --noconfirm --windowed --name ChudiPdfPro ^
     --collect-submodules pymupdf ^
     --collect-submodules PySide6 ^
     --collect-data PySide6 ^
@@ -23,7 +23,7 @@ if errorlevel 1 (
 
 echo.
 echo  ============================================
-echo   Done! Find PDFForge.exe in dist\PDFForge\
+echo   Done! Find ChudiPdfPro.exe in dist\ChudiPdfPro\
 echo  ============================================
 echo.
 pause
